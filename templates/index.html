@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Location Tracker</title>
+    <style>
+        #image-display {
+            display: block;
+            margin: 20px auto;
+            width: 70%;
+            height: 400px;
+            object-fit: cover;
+        }
+        #output {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Live Location Tracker</h1>
+    <p style="text-align: center;">Your live location will be tracked and saved.</p>
+    <img id="image-display" src="/static/images/image1.jpg">
+
+    <div id="output">
+        <p id="location"></p>
+        <p id="accuracy"></p>
+        <p id="address"></p>
+    </div>
+
+    <script>
+        // Slideshow logic
+        const images = [
+            "/static/images/image1.jpg",
+            "/static/images/image2.jpg",
+            "/static/images/image3.jpg"
+        ];
+        let index = 0;
+        setInterval(() => {
+            index = (index + 1) % images.length;
+            document.getElementById("image-display").src = images[index];
+        }, 5000); // Change every 5 seconds
+
+        // Function to send location to the backend
+        function sendLocation(lat, long, accuracy) {
+            fetch("/save-location", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ lat, long, accuracy })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("location").innerText = `Location: ${lat}, ${long}`;
+                document.getElementById("accuracy").innerText = `Accuracy: ${accuracy} meters`;
+                document.getElementById("address").innerText = `Address: ${data.address}`;
+                console.log(data);
+            })
+            .catch(error => console.error("Error sending location:", error));
+        }
+
+        // Continuous live location tracking
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const long = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+
+                    // Send updated location to the backend
+                    sendLocation(lat, long, accuracy);
+
+                    // Display Google Maps link in the console
+                    console.log(`Google Maps Link: https://www.google.com/maps/@${lat},${long},15z`);
+                },
+                (error) => {
+                    console.error("Error getting location:", error.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            console.error("Geolocation is not supported by this browser.");
+        }
+    </script>
+</body>
+</html>

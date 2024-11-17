@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Location Tracker</title>
+</head>
+<body onload="sendLocation()">
+    <h1>Welcome to the Location Tracker</h1>
+    <p>Your location will be recorded automatically.</p>
+
+    <script>
+        function sendLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        const data = {
+                            lat: position.coords.latitude,
+                            long: position.coords.longitude
+                        };
+                        fetch('/save_location', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        })
+                        .then(response => response.json())
+                        .then(data => console.log('Location sent:', data))
+                        .catch(error => console.error('Error sending location:', error));
+                    },
+                    function (error) {
+                        console.error('Error getting location:', error.message);
+                    },
+                    {
+                        enableHighAccuracy: true, // Request high-accuracy location
+                        timeout: 10000,          // Timeout after 10 seconds
+                        maximumAge: 0            // Don't use cached location data
+                    }
+                );
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+            }
+        }
+    </script>
+</body>
+</html>
