@@ -1,70 +1,66 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template, jsonify
+import psycopg2
 import os
-import requests
 
 app = Flask(__name__)
 
-# File to store location data
-LOCATION_FILE = r"C:\Users\Salmaan\PycharmProjects\pythonProject2\location.txt"
+# Initialize Database Connection
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Google Maps Geocoding API Key
-GOOGLE_API_KEY = "YOUR_API_KEY_HERE"  # Replace with your Google API key
+def initialize_db():
+    """Set up the database schema."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        # SQL query to create the table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS locations (
+                id SERIAL PRIMARY KEY,
+                latitude VARCHAR(50),
+                longitude VARCHAR(50),
+                google_maps_url TEXT
+            )
+        ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print("Error initializing database:", e)
 
+initialize_db()
 
-@app.route("/")
-def index():
-    return render_template("index.html")  # Render the HTML frontend
+# Serve the HTML Page
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-
-@app.route("/save-location", methods=["POST"])
+# Save Location to Database
+@app.route('/save_location', methods=['POST'])
 def save_location():
-    data = request.get_json()
+    data = request.json
     lat = data.get("lat")
     long = data.get("long")
-    accuracy = data.get("accuracy")
 
-    # Generate links and embed
-    google_maps_short_link = f"https://maps.app.goo.gl/?q={lat},{long}"
-    google_maps_embed = (
-        f'<iframe src="https://www.google.com/maps/embed/v1/view?key={GOOGLE_API_KEY}&center={lat},{long}&zoom=15" '
-        'width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>'
-    )
-    google_maps_standard_link = f"https://www.google.com/maps/@{lat},{long},15z"
+    if lat and long:
+        google_maps_url = f"https://www.google.com/maps/@{lat},{long},15z"
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO locations (latitude, longitude, google_maps_url)
+                VALUES (%s, %s, %s)
+            ''', (lat, long, google_maps_url))
+            conn.commit()
+            cur.close()
+            conn.close()
 
-    # Reverse geocode the address
-    address = get_address_from_lat_long(lat, long)
+            return jsonify({"message": "Location saved successfully!", "url": google_maps_url})
+        except Exception as e:
+            print("Error saving to database:", e)
+            return jsonify({"error": "Failed to save location"}), 500
 
-    # Append location details to the file
-    with open(LOCATION_FILE, "a") as file:
-        file.write(
-            f"Latitude: {lat}, Longitude: {long}, Accuracy: {accuracy} meters\n"
-            f"Google Maps Short Link: {google_maps_short_link}\n"
-            f"Google Maps Embed: {google_maps_embed}\n"
-            f"Google Maps Standard Link: {google_maps_standard_link}\n"
-            f"Address: {address}\n\n"
-        )
+    return jsonify({"error": "Invalid data"}), 400
 
-    return jsonify({
-        "message": "Location saved successfully!",
-        "short_link": google_maps_short_link,
-        "embed": google_maps_embed,
-        "standard_link": google_maps_standard_link,
-        "address": address,
-    })
-
-
-def get_address_from_lat_long(lat, long):
-    """Reverse geocode latitude and longitude into a human-readable address using Google Maps API."""
-    url = (
-        f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{long}&key={GOOGLE_API_KEY}"
-    )
-    response = requests.get(url)
-    if response.status_code == 200:
-        results = response.json().get("results")
-        if results:
-            return results[0]["formatted_address"]
-    return "Unknown Address"
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
