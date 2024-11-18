@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://<your_connection_string_here>")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@localhost:5432/your_database_name")
 
 # Initialize database table if it doesn't exist
 def init_db():
@@ -14,7 +14,7 @@ def init_db():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        
+
         # Create table if it doesn't exist
         cur.execute('''
             CREATE TABLE IF NOT EXISTS locations (
@@ -26,13 +26,12 @@ def init_db():
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
         conn.commit()
         cur.close()
         conn.close()
-        app.logger.info("Database initialized successfully!")
+        print("Database initialized successfully!")
     except Exception as e:
-        app.logger.error(f"Error initializing database: {e}")
+        print(f"Error initializing database: {e}")
 
 
 @app.route('/')
@@ -50,9 +49,13 @@ def save_location():
         long = data.get("long")
         accuracy = data.get("accuracy")
 
+        # Log incoming data for debugging
+        print(f"Received data: lat={lat}, long={long}, accuracy={accuracy}")
+
         # Validate input
-        if lat is None or long is None or not isinstance(lat, (int, float)) or not isinstance(long, (int, float)):
-            return jsonify({"error": "Invalid latitude or longitude"}), 400
+        if lat is None or long is None or accuracy is None:
+            print("Error: Missing latitude, longitude, or accuracy.")
+            return jsonify({"error": "Invalid data received"}), 400
 
         # Construct the Google Maps link
         google_maps_url = f"https://www.google.com/maps/@{lat},{long},15z"
@@ -71,10 +74,11 @@ def save_location():
         cur.close()
         conn.close()
 
+        print("Location saved successfully.")
         return jsonify({"message": "Location saved successfully!", "url": google_maps_url})
 
     except Exception as e:
-        app.logger.error(f"Error saving location: {e}")
+        print(f"Error saving location: {e}")
         return jsonify({"error": "Failed to save location"}), 500
 
 
@@ -97,7 +101,7 @@ def fetch_locations():
         return jsonify(result)
 
     except Exception as e:
-        app.logger.error(f"Error fetching data: {e}")
+        print(f"Error fetching data: {e}")
         return jsonify({"error": "Failed to fetch data"}), 500
 
 
