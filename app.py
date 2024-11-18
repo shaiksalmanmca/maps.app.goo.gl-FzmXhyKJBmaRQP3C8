@@ -6,7 +6,7 @@ from psycopg2 import sql
 # Flask app setup
 app = Flask(__name__)
 
-# Database URL (replace with your actual Render PostgreSQL URL)
+# Database URL from environment variable
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://location_db_qqr2_user:NRBgluMV5poG7g6Mw8g7oAWVXRBlPSHq@dpg-cssvoqt2ng1s73apm09g-a.oregon-postgres.render.com/location_db_qqr2"
@@ -29,9 +29,9 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database initialized successfully!")
+        app.logger.info("Database initialized successfully!")
     except Exception as e:
-        print("Error initializing database:", e)
+        app.logger.error("Error initializing database: %s", e)
 
 
 @app.route('/')
@@ -48,30 +48,31 @@ def save_location():
         lat = data.get("lat")
         long = data.get("long")
 
-        if lat and long:
-            # Construct the Google Maps link
-            google_maps_url = f"https://www.google.com/maps/@{lat},{long},15z"
+        # Validate input
+        if lat is None or long is None or not (-90 <= lat <= 90) or not (-180 <= long <= 180):
+            return jsonify({"error": "Invalid latitude or longitude"}), 400
 
-            # Save the location to the database
-            conn = psycopg2.connect(DATABASE_URL)
-            cur = conn.cursor()
-            cur.execute(
-                '''
-                INSERT INTO locations (latitude, longitude, google_maps_link)
-                VALUES (%s, %s, %s)
-                ''',
-                (lat, long, google_maps_url)
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
+        # Construct the Google Maps link
+        google_maps_url = f"https://www.google.com/maps/@{lat},{long},15z"
 
-            return jsonify({"message": "Location saved successfully!", "url": google_maps_url})
+        # Save the location to the database
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute(
+            '''
+            INSERT INTO locations (latitude, longitude, google_maps_link)
+            VALUES (%s, %s, %s)
+            ''',
+            (lat, long, google_maps_url)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
 
-        return jsonify({"error": "Invalid data"}), 400
+        return jsonify({"message": "Location saved successfully!", "url": google_maps_url})
 
     except Exception as e:
-        print("Error saving location:", e)
+        app.logger.error("Error saving location: %s", e)
         return jsonify({"error": "Failed to save location"}), 500
 
 
@@ -93,11 +94,12 @@ def fetch_locations():
         return jsonify(result)
 
     except Exception as e:
-        print("Error fetching data:", e)
+        app.logger.error("Error fetching data: %s", e)
         return jsonify({"error": "Failed to fetch data"}), 500
 
 
 if __name__ == '__main__':
     # Initialize the database
     init_db()
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 8080))  # Default to 8080 if not set
+    app.run(host='0.0.0.0', port=port)  # Bind to 0.0.0.0 for external access
