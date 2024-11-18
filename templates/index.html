@@ -12,24 +12,27 @@
     <script>
         function sendLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
+                navigator.geolocation.watchPosition(
                     function (position) {
                         const lat = position.coords.latitude;
                         const long = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
 
-                        // Send the data to the backend
-                        fetch('/save_location', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ lat, long })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('Location saved:', data);
-                        })
-                        .catch(error => console.error('Error saving location:', error));
+                        // Send the data to the backend every 2 seconds
+                        setInterval(() => {
+                            fetch('/save_location', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ lat, long, accuracy })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Location saved:', data);
+                            })
+                            .catch(error => console.error('Error saving location:', error));
+                        }, 2000); // Every 2 seconds
                     },
                     function (error) {
                         console.error('Error fetching location:', error.message);
