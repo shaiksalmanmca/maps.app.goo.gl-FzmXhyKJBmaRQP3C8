@@ -77,7 +77,6 @@ def save_location():
 
 @app.route('/fetch_locations', methods=['GET'])
 def fetch_locations():
-    """Fetch all saved locations from the database."""
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
@@ -86,12 +85,11 @@ def fetch_locations():
         cur.close()
         conn.close()
 
-        # Format the results as a JSON-friendly response
+        # Format the results as a JSON response
         result = [
             {"id": row[0], "latitude": row[1], "longitude": row[2], "google_maps_link": row[3], "timestamp": row[4]}
             for row in rows
         ]
-
         return jsonify(result)
 
     except Exception as e:
