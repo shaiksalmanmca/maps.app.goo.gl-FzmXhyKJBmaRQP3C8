@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import psycopg2
 import os
-from psycopg2 import sql
 
 # Flask app setup
 app = Flask(__name__)
@@ -11,18 +10,34 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Initialize database table if it doesn't exist
 def init_db():
+    """Initialize the database table and ensure schema is correct."""
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+        
+        # Create table if it doesn't exist
         cur.execute('''
             CREATE TABLE IF NOT EXISTS locations (
                 id SERIAL PRIMARY KEY,
                 latitude DOUBLE PRECISION NOT NULL,
                 longitude DOUBLE PRECISION NOT NULL,
-                google_maps_link TEXT NOT NULL,
+                google_maps_link TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Ensure google_maps_link column exists
+        cur.execute('''
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_name='locations' AND column_name='google_maps_link') THEN
+                    ALTER TABLE locations ADD COLUMN google_maps_link TEXT;
+                END IF;
+            END;
+            $$;
+        ''')
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -75,6 +90,7 @@ def save_location():
 
 @app.route('/fetch_locations', methods=['GET'])
 def fetch_locations():
+    """Fetch all saved locations from the database."""
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
