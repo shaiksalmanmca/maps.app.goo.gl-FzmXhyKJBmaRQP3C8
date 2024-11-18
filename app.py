@@ -7,10 +7,7 @@ from psycopg2 import sql
 app = Flask(__name__)
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://location_db_qqr2_user:NRBgluMV5poG7g6Mw8g7oAWVXRBlPSHq@dpg-cssvoqt2ng1s73apm09g-a.oregon-postgres.render.com/location_db_qqr2"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Initialize database table if it doesn't exist
 def init_db():
@@ -20,8 +17,8 @@ def init_db():
         cur.execute('''
             CREATE TABLE IF NOT EXISTS locations (
                 id SERIAL PRIMARY KEY,
-                latitude FLOAT NOT NULL,
-                longitude FLOAT NOT NULL,
+                latitude DOUBLE PRECISION NOT NULL,
+                longitude DOUBLE PRECISION NOT NULL,
                 google_maps_link TEXT NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -31,7 +28,7 @@ def init_db():
         conn.close()
         app.logger.info("Database initialized successfully!")
     except Exception as e:
-        app.logger.error("Error initializing database: %s", e)
+        app.logger.error(f"Error initializing database: {e}")
 
 
 @app.route('/')
@@ -49,7 +46,7 @@ def save_location():
         long = data.get("long")
 
         # Validate input
-        if lat is None or long is None or not (-90 <= lat <= 90) or not (-180 <= long <= 180):
+        if lat is None or long is None or not isinstance(lat, (int, float)) or not isinstance(long, (int, float)):
             return jsonify({"error": "Invalid latitude or longitude"}), 400
 
         # Construct the Google Maps link
@@ -72,7 +69,7 @@ def save_location():
         return jsonify({"message": "Location saved successfully!", "url": google_maps_url})
 
     except Exception as e:
-        app.logger.error("Error saving location: %s", e)
+        app.logger.error(f"Error saving location: {e}")
         return jsonify({"error": "Failed to save location"}), 500
 
 
@@ -94,7 +91,7 @@ def fetch_locations():
         return jsonify(result)
 
     except Exception as e:
-        app.logger.error("Error fetching data: %s", e)
+        app.logger.error(f"Error fetching data: {e}")
         return jsonify({"error": "Failed to fetch data"}), 500
 
 
