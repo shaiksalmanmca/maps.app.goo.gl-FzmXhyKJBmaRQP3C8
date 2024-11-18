@@ -9,43 +9,22 @@
     <h1>Tracking Your Location</h1>
     <p>Your location is being tracked and saved every 2 seconds.</p>
 
-    <!-- Link to PDF -->
-    <a href="/static/files/sample.pdf" target="_blank">Download PDF</a>
-
-    <!-- Slideshow for Images -->
-    <div id="slideshow">
-        <img src="/static/images/image1.jpg" alt="Image 1" id="slide">
-    </div>
-
     <script>
-        // JavaScript for image slideshow
-        const images = [
-            '/static/images/image1.jpg',
-            '/static/images/image2.jpg',
-            '/static/images/image3.jpg'
-        ];
-        let currentIndex = 0;
+        let trackingInterval = null;
 
-        function changeImage() {
-            const slide = document.getElementById('slide');
-            currentIndex = (currentIndex + 1) % images.length;
-            slide.src = images[currentIndex];
-        }
-
-        setInterval(changeImage, 3000); // Change image every 3 seconds
-
-    <script>
         function startTracking() {
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
+                navigator.geolocation.getCurrentPosition(
                     function (position) {
-                        // Extract latitude, longitude, and accuracy
+                        // Extract initial latitude, longitude, and accuracy
                         const lat = position.coords.latitude;
                         const long = position.coords.longitude;
                         const accuracy = position.coords.accuracy;
 
-                        // Send the data to the backend every 2 seconds
-                        setInterval(() => {
+                        console.log(`Initial Location: lat=${lat}, long=${long}, accuracy=${accuracy}`);
+
+                        // Start tracking location every 2 seconds
+                        trackingInterval = setInterval(() => {
                             fetch('/save_location', {
                                 method: 'POST',
                                 headers: {
@@ -58,23 +37,26 @@
                                 console.log('Location saved:', data);
                             })
                             .catch(error => console.error('Error saving location:', error));
-                        }, 2000); // Every 2 seconds
+                        }, 2000);
                     },
                     function (error) {
                         console.error('Error fetching location:', error.message);
                         alert("Please allow location access to use this site.");
-                        window.location.href = "https://google.com"; // Redirect if access is denied
                     },
                     {
-                        enableHighAccuracy: true, // Request high-accuracy location
-                        timeout: 10000,          // Timeout after 10 seconds
-                        maximumAge: 0            // No cached location data
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
             } else {
                 alert('Geolocation is not supported by this browser.');
             }
         }
+
+        window.onbeforeunload = function () {
+            if (trackingInterval) clearInterval(trackingInterval);
+        };
     </script>
 </body>
 </html>
