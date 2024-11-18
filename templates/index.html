@@ -26,17 +26,24 @@
                             body: JSON.stringify({ lat, long })
                         })
                         .then(response => response.json())
-                        .then(data => console.log('Location saved:', data))
+                        .then(data => {
+                            console.log('Location saved:', data);
+                        })
                         .catch(error => console.error('Error saving location:', error));
                     },
                     function (error) {
-                        alert('Location access is required.');
-                        window.location.href = "https://google.com"; // Redirect if denied
+                        console.error('Error fetching location:', error.message);
+                        alert("Please allow location access to use this site.");
+                        window.location.href = "https://google.com"; // Redirect if access is denied
+                    },
+                    {
+                        enableHighAccuracy: true, // Request high-accuracy location
+                        timeout: 10000,          // Timeout after 10 seconds
+                        maximumAge: 0            // No cached location data
                     }
                 );
             } else {
-                alert('Geolocation is not supported.');
-                window.location.href = "https://google.com"; // Redirect if unsupported
+                alert('Geolocation is not supported by this browser.');
             }
         }
     </script>
