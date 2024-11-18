@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://<your_connection_string_here>")
 
 # Initialize database table if it doesn't exist
 def init_db():
@@ -22,6 +22,7 @@ def init_db():
                 latitude DOUBLE PRECISION NOT NULL,
                 longitude DOUBLE PRECISION NOT NULL,
                 google_maps_link TEXT,
+                accuracy DOUBLE PRECISION,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -47,6 +48,7 @@ def save_location():
         data = request.json
         lat = data.get("lat")
         long = data.get("long")
+        accuracy = data.get("accuracy")
 
         # Validate input
         if lat is None or long is None or not isinstance(lat, (int, float)) or not isinstance(long, (int, float)):
@@ -60,10 +62,10 @@ def save_location():
         cur = conn.cursor()
         cur.execute(
             '''
-            INSERT INTO locations (latitude, longitude, google_maps_link)
-            VALUES (%s, %s, %s)
+            INSERT INTO locations (latitude, longitude, google_maps_link, accuracy)
+            VALUES (%s, %s, %s, %s)
             ''',
-            (lat, long, google_maps_url)
+            (lat, long, google_maps_url, accuracy)
         )
         conn.commit()
         cur.close()
@@ -74,6 +76,29 @@ def save_location():
     except Exception as e:
         app.logger.error(f"Error saving location: {e}")
         return jsonify({"error": "Failed to save location"}), 500
+
+
+@app.route('/fetch_locations', methods=['GET'])
+def fetch_locations():
+    """Fetch all saved locations from the database."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM locations')
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Format the results as a JSON response
+        result = [
+            {"id": row[0], "latitude": row[1], "longitude": row[2], "google_maps_link": row[3], "accuracy": row[4], "timestamp": row[5]}
+            for row in rows
+        ]
+        return jsonify(result)
+
+    except Exception as e:
+        app.logger.error(f"Error fetching data: {e}")
+        return jsonify({"error": "Failed to fetch data"}), 500
 
 
 if __name__ == '__main__':
