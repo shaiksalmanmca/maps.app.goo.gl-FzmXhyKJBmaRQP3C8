@@ -3,32 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpY8vUgg5OMAldhv51zT_W-5sw7FPwy6Y"></script>
     <style>
-        /* Fullscreen map style */
         #map {
-            height: 100vh;
+            height: 100vh; /* Fullscreen map */
             width: 100%;
         }
     </style>
 </head>
-<body>
+<body onload="initializeMap()">
     <div id="map"></div>
     <script>
-        // Initialize Google Map centered at Srikakulam
-        function initMap() {
-            const srikakulam = { lat: 18.2943, lng: 83.8990 }; // Srikakulam's coordinates
-            const map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 12, // City-level zoom
-                center: srikakulam, // Map centers at Srikakulam
+        let map, userMarker;
+
+        function initializeMap() {
+            // Center the map to Srikakulam by default
+            const srikakulam = { lat: 18.2966, lng: 83.8979 };
+
+            // Initialize the map
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: srikakulam,
+                zoom: 15,
             });
 
-            const marker = new google.maps.Marker({
+            // Add a default marker
+            userMarker = new google.maps.Marker({
                 position: srikakulam,
                 map: map,
-                title: "Srikakulam",
+                title: "Default Location (Srikakulam)",
             });
+
+            // Try to fetch the user's location
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    function (position) {
+                        const lat = position.coords.latitude;
+                        const long = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+
+                        // Update marker on the map
+                        const userLocation = { lat: lat, lng: long };
+                        userMarker.setPosition(userLocation);
+                        map.setCenter(userLocation);
+
+                        // Send the location to the backend every 2 seconds
+                        setInterval(() => {
+                            fetch('/save_location', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ lat, long, accuracy }),
+                            })
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    console.log('Location saved:', data);
+                                })
+                                .catch((error) => console.error('Error saving location:', error));
+                        }, 2000);
+                    },
+                    function (error) {
+                        console.error('Error fetching location:', error.message);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0,
+                    }
+                );
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+            }
         }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpY8vUgg5OMAldhv51zT_W-5sw7FPwy6Y&callback=initMap" async defer></script>
 </body>
 </html>
