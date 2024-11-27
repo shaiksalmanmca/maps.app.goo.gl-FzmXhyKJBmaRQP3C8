@@ -101,14 +101,6 @@ def fetch_locations():
     except Exception as e:
         print(f"Turn on location: {e}")
         return jsonify({"error": "Turn on Location"}), 500
-
-@app.route('/map/<custom_id>', methods=['GET'])
-def redirect_custom_map(custom_id):
-    """Redirect to a custom Google Maps link based on a custom string."""
-    srikakulam_coords = "18.2943,83.8990"
-    google_maps_base = "https://maps.google.com/maps?q="
-    final_url = f"{google_maps_base}{srikakulam_coords}"
-    return redirect(final_url)
     
 if __name__ == '__main__':
     # Initialize the database
