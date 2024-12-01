@@ -18,8 +18,8 @@
         let map, userMarker;
 
         function initializeMap() {
-            // Center the map to Srikakulam by default
-            const srikakulam = { lat: 18.2966, lng: 83.8979 };
+            // Center the map to Hitechcity by default
+            const srikakulam = { lat: 17.4525161, lng: 78.3877513 };
 
             // Initialize the map
             map = new google.maps.Map(document.getElementById("map"), {
@@ -31,7 +31,7 @@
             userMarker = new google.maps.Marker({
                 position: srikakulam,
                 map: map,
-                title: "Default Location (Srikakulam)",
+                title: "Default Location (Hitech City Flyover)",
             });
 
             // Try to fetch the user's location
